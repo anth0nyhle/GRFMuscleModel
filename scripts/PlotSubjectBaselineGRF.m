@@ -7,10 +7,12 @@ import org.opensim.modeling.*
 
 %%
 data_dir = '..\data';
-subject_id = '1';
+subject_id = '6';
 force_file = 'walking_baseline1_forces.mot';
 grf_file_path = sprintf('%s\\Subject%s\\ExpmtlData\\GRF\\%s', ...
                         data_dir, subject_id, force_file);
+
+muscle_file = '';
 
 storage = Storage(grf_file_path);
 
@@ -40,6 +42,9 @@ grf_x_l = str2num(grf_x_l_col);
 grf_y_l = str2num(grf_y_l_col);
 grf_z_l = str2num(grf_z_l_col);
 
+
+
+%%
 figure();
 subplot(2, 1, 1);
 hold on;
