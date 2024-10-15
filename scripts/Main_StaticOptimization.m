@@ -19,7 +19,7 @@ data_dir = '..\data' ; % Base Directory to base results directory.
 addpath(genpath('..\src'))
 
 subject_id = 1;
-trial_id = 2;
+trial_id = 8;
 
 subject_dir = ['\Subject', num2str(subject_id)];
 trial_names = {'walking_baseline1', ...                                         % 1
