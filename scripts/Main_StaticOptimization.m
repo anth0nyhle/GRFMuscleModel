@@ -18,8 +18,16 @@ clear all; close all; format compact; clc; fclose all;
 data_dir = '..\data' ; % Base Directory to base results directory.
 addpath(genpath('..\src'))
 
-subject_dir = '\Subject1';
-trial_name = 'walking_baseline1';
+subject_id = 1;
+trial_id = 2;
+
+subject_dir = ['\Subject', num2str(subject_id)];
+trial_names = {'walking_baseline1', ...                                         % 1
+               'walking_FBexp1_finalNoFB1', 'walking_FBexp1_finalFB1', ...      % 2, 3
+               'walking_FBcolor1_finalNoFB1', 'walking_FBcolor1_finalFB1', ...  % 4, 5
+               'walking_FBcolor2_finalNoFB1', 'walking_FBcolor2_finalFB1', ...  % 6, 7
+               'walking_retention1'};                                           % 8
+trial_name = trial_names{trial_id};
 
 % % % Fill Path names
 INPUTS.trialname = trial_name ; 
