@@ -1,4 +1,4 @@
-%% Plot ground reaction forces for a subject
+%% Segment ground reaction force for a subject
 
 %% Initialize workspace
 clear; close all; clc; fclose all; format compact;
@@ -62,41 +62,22 @@ time_muscle = str2num(time_muscle_col);
 tibpost_r = str2num(tibpost_r_col);
 
 %%
-trans1 = find(diff(grf_y_r > 0) == 1);
-trans2 = find(diff(grf_y_r ~= 0) == -1);
+start_peak = find(diff(grf_y_r > 0) == 1);
+end_peak = find(diff(grf_y_r ~= 0) == -1);
 
+num_segments = min(length(start_peak), length(end_peak));
 
-%%
+segments = cell(num_segments, 1);
+
 figure();
 hold on;
-plot(time_grf, grf_y_r, 'LineWidth', 1.5);
-plot(time_muscle, tibpost_r, 'LineWidth', 1.5);
-xlabel('Time (s)');
-ylabel('Force (N)');
-legend({'grf_y_r', 'tibpost_r'}, 'Interpreter', 'None');
+
+for i = 1:num_segments
+    segments{i} = grf_y_r(start_peak(i)-5:end_peak(i)+5);
+
+    x = 1:length(start_peak(i)-5:end_peak(i)+5);
+
+    plot(x, grf_y_r(start_peak(i)-5:end_peak(i)+5));
+end
 hold off;
-
-
-%%
-figure();
-subplot(2, 1, 1);
-hold on;
-plot(time_grf, grf_x_r, 'LineWidth', 1.5);
-plot(time_grf, grf_y_r, 'LineWidth', 1.5);
-plot(time_grf, grf_z_r, 'LineWidth', 1.5);
-xlabel('Time (s)');
-ylabel('Ground Reaction Force (N)');
-legend('X_R', 'Y_R', 'Z_R');
-hold off;
-
-subplot(2, 1, 2);
-hold on;
-plot(time_grf, grf_x_l, 'LineWidth', 1.5);
-plot(time_grf, grf_y_l, 'LineWidth', 1.5);
-plot(time_grf, grf_z_l, 'LineWidth', 1.5);
-xlabel('Time (s)');
-ylabel('Ground Reaction Force (N)');
-legend('X_L', 'Y_L', 'Z_L');
-hold off;
-
 
