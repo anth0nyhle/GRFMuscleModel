@@ -16,10 +16,10 @@ clear all; close all; format compact; clc; fclose all;
 % % Path to the data and utility functions. No need to change this, unless
 % you rearrange the folder structure, differently from github.
 data_dir = '..\data' ; % Base Directory to base results directory.
-addpath(genpath('..\src'))
+addpath(genpath('..\src'));
 
 subject_id = 1;
-trial_id = 8;
+trial_id = 1;
 
 subject_dir = ['\Subject', num2str(subject_id)];
 trial_names = {'walking_baseline1', ...                                         % 1
