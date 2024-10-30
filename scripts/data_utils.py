@@ -12,10 +12,9 @@ def ad2float(array_double_col):
 
 def interp_segments(segments, n_interp_points):
     segments_resampled = []
+    time_resampled = []
 
     num_segments = len(segments)
-
-    plt.figure(figsize=(10, 10))
 
     for i in range(num_segments):
         original_time = np.linspace(0, 1, len(segments[i]))
@@ -27,11 +26,9 @@ def interp_segments(segments, n_interp_points):
         interp_seg = interp_func(resampled_time)
 
         segments_resampled.append(interp_seg)
-        plt.plot(resampled_time, interp_seg)
+        time_resampled.append(resampled_time)
 
-    plt.show()
-
-    return segments_resampled
+    return segments_resampled, time_resampled
 
 
 def exclude_segments(segments, min_len, max_len):
