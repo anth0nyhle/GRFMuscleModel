@@ -155,7 +155,7 @@ def generate_latex_table(results_muscle_dict, results_overall_dict, muscle_label
 
     table += "\\midrule\n"
 
-    table += f"Overall & {results_overall_dict['LSTM']:.4f} & {results_overall_dict['CNN-LSTM']:.4f} & {results_overall_dict['LSTM-Attention']:.4f} & {results_overall_dict['Transformer']:.4f} \\\\\n"
+    table += f"Overall & {results_overall_dict['LSTM']:.4f} & {results_overall_dict['CNN-LSTM']:.4f} & {results_overall_dict['LSTM+Attention']:.4f} & {results_overall_dict['Transformer']:.4f} \\\\\n"
 
     table += "\\bottomrule\n"
     table += "\\end{tabular}\n"
