@@ -1,13 +1,14 @@
-# Data-Driven GRF-Muscle Force Model
+# Predicting Lower Limb Muscle Forces from Ground Reaction Forces During Gait Using Sequence and Attention-Based Deep Learning Models
 
 ## Description
 
-This project aims to deveop a data-driven model  of the relationship between ground reaction forces and muscle forces using deep learning techniques. This model will be trained on a data from ten healthy individuals walking on an instrumented treadmill that has been collected, processed, and open-sourced by [Uhlrich et al., 2022](https://doi.org/10.1038/s41598-022-13386-9). 
+This project aims to develop a data-driven model  of the relationship between ground reaction forces and muscle forces using deep learning techniques. This model will be trained on a data from ten healthy individuals walking on an instrumented treadmill that has been collected, processed, and open-sourced by [Uhlrich et al., 2022](https://doi.org/10.1038/s41598-022-13386-9). 
 
 ## Getting Started
 
 ### Dependencies
 
+* Python 3.11.10
 * 
 
 ### Installation
