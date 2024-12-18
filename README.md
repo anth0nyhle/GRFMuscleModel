@@ -2,29 +2,32 @@
 
 ## Description
 
-This project aims to develop a data-driven model  of the relationship between ground reaction forces and muscle forces using deep learning techniques. This model will be trained on a data from ten healthy individuals walking on an instrumented treadmill that has been collected, processed, and open-sourced by [Uhlrich et al., 2022](https://doi.org/10.1038/s41598-022-13386-9). 
+This project aims to develop a data-driven model  of the relationship between ground reaction forces and muscle forces using deep learning techniques. This model will be trained on a data from ten healthy individuals walking on a force-instrumented treadmill in a motion capture laboratory that has been collected, processed, and open-sourced by [Uhlrich et al., 2022](https://doi.org/10.1038/s41598-022-13386-9).
+
+Four models were explored, including LSTM, CNN-LSTM, LSTM with Attention, and a Transformer. All models achieved strong predictive performance, with the Transformer model consistently outperforming others in accuracy across most muscle forces and overall. These results highlight the potential of deep learning to capture the complex relationships and patterns between GRFs and lower limb muscle forces during gait. This work provides the groundwork for advancing data-driven approaches in robotic cadaveric gait simulation, enabling more reliable and flexible control strategies to replicate physiological motions in cadavers.
 
 ## Getting Started
 
 ### Dependencies
 
 * Python 3.11.10
-* 
-
-### Installation
-
-1. 
+* PyTorch 2.5.1 or later
+* NumPy
+* SciPy
+* Matplotlib
+* OpenSim 4.5 or later
+* OpenSim Python API
+* OpenSim MATLAB API
 
 ### Data
 
 1. Download dataset from the [Coordination Retraining Project](https://simtk.org/projects/coordretraining) on SimTK
 2. Extract the dataset to the 'data' directory
 
-### Execution
-
-
 ### Additional Documentation
 
+* [OpenSim API Documentation](https://opensimconfluence.atlassian.net/wiki/spaces/OpenSim/pages/53085346/Scripting+in+Python)
+* [PyTorch Documentation](https://pytorch.org/docs/stable/index.html)
 
 ## Contributing
 
@@ -44,7 +47,7 @@ This project is licensed under the Creative Commons Zero License.
 ## Verison History
 
 * 0.1
-    * Initial Release
+  * Initial Release
 
 ## Acknowledgements
 
