@@ -24,6 +24,17 @@ Four models were explored, including LSTM, CNN-LSTM, LSTM with Attention, and a 
 1. Download dataset from the [Coordination Retraining Project](https://simtk.org/projects/coordretraining) on SimTK
 2. Extract the dataset to the 'data' directory
 
+### Execution
+
+1. Run experimental gait data through the custom static opimization pipeline developed by Uhlrich et al., 2022
+2. Batch process and segment ground reaction forces and estimated muscle forces using the OpenSim API
+3. Preprocess data by resampling and normalizing data
+4. Save data to a .npy file
+5. Load .npy file and randomly split data into training, validation, and test sets
+6. Implement, tune, and train deep learning models
+7. Evaluate model performance on test set
+8. Calculate and visualize model performance metrics
+
 ### Additional Documentation
 
 * [OpenSim API Documentation](https://opensimconfluence.atlassian.net/wiki/spaces/OpenSim/pages/53085346/Scripting+in+Python)
