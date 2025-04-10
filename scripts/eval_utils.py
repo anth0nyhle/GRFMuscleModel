@@ -127,6 +127,37 @@ def calc_rmspe_overall(y_true, y_pred):
     return rmspe_overall
 
 
+def calc_mae_muscle(y_true, y_pred):
+    mae = np.mean(np.abs(y_true - y_pred), axis=(0, 1))  # Calculate MAE for each muscle
+
+    muscle_labels = ['tibpost', 'tibant', 'edl', 'ehl',
+                     'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
+
+    for label, mae_val in zip(muscle_labels, mae):
+        print(f"{label}: {mae_val:.4f}")
+
+    return mae
+
+
+def calc_mae_weighted(y_true, y_pred):
+    ranges = y_true.max(axis=(0, 1)) - y_true.min(axis=(0, 1))
+    mae = np.mean(np.abs(y_true - y_pred), axis=(0, 1))  # Calculate MAE for each muscle
+
+    relative_mae_range = mae / ranges
+    relative_mae_weighted = np.sum(relative_mae_range * ranges) / np.sum(ranges)
+
+    return relative_mae_weighted
+
+
+def calc_mae_overall(y_true, y_pred):
+    y_true = y_true.flatten()
+    y_pred = y_pred.flatten()
+
+    mae_overall = np.mean(np.abs(y_true - y_pred))  # Calculate overall MAE
+
+    return mae_overall
+
+
 def eval_model(model, X_test_tensor, y_test_tensor):
     model.eval()
 
