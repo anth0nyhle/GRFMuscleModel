@@ -62,32 +62,6 @@ def calc_rrmse_muscle(y_true, y_pred):
     return relative_rmse_range
 
 
-def calc_nrmse_muscle(y_true, y_pred):
-    means = y_true.mean(axis=(0, 1))
-    rmse = np.sqrt(np.mean((y_true - y_pred) ** 2, axis=(0, 1)))
-    relative_rmse_mean = rmse / means
-
-    muscle_labels = ['tibpost', 'tibant', 'edl', 'ehl',
-                     'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
-
-    for label, rel_range, rel_mean in zip(muscle_labels, relative_rmse_mean):
-        print(f"{label}: {rel_range:.4f}, {rel_mean:.4f}")
-
-    return relative_rmse_mean
-
-
-def calc_rmspe_muscle(y_true, y_pred):
-    rmspe = np.sqrt(np.mean(((y_true - y_pred) / y_true) ** 2, axis=(0, 1)))
-
-    muscle_labels = ['tibpost', 'tibant', 'edl', 'ehl',
-                     'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
-
-    for label, rmspe_val in zip(muscle_labels, rmspe):
-        print(f"{label}: {rmspe_val:.4f}")
-
-    return rmspe
-
-
 def calc_rmse_overall(y_true, y_pred):
     y_true = y_true.flatten()
     y_pred = y_pred.flatten()
@@ -116,15 +90,6 @@ def calc_rrmse_weighted(y_true, y_pred):
     relative_rmse_weighted = np.sum(relative_rmse_range * ranges) / np.sum(ranges)
 
     return relative_rmse_weighted
-
-
-def calc_rmspe_overall(y_true, y_pred):
-    y_true = y_true.flatten()
-    y_pred = y_pred.flatten()
-
-    rmspe_overall = np.sqrt(np.mean(((y_true - y_pred) / y_true) ** 2))
-
-    return rmspe_overall
 
 
 def calc_mae_muscle(y_true, y_pred):
@@ -195,3 +160,16 @@ def generate_latex_table(results_muscle_dict, results_overall_dict, muscle_label
     table += "\\end{table}\n"
 
     return table
+
+
+def calc_mae_sample_muscle(y_true, y_pred):
+    """
+    Calculate MAE for each sample and muscle by averaging over time steps.
+
+    Returns:
+        mae_matrix: (n_samples, n_muscles)
+    """
+    abs_error = np.abs(y_true - y_pred)         # (n_samples, n_timesteps, n_muscles)
+    mae_matrix = np.mean(abs_error, axis=1)     # average over time → (n_samples, n_muscles)
+
+    return mae_matrix
