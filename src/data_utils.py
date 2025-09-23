@@ -36,3 +36,10 @@ def exclude_segments(segments, min_len, max_len):
 
     return segments
 
+
+def load_data():
+    
+    
+def split_data():
+    
+    
