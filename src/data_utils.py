@@ -107,6 +107,7 @@ def split_data(data: np.ndarray):
     print(f"Number of samples: {num_samples}")
     # print(f"Train size: {train_size}")
     # print(f"Validation size: {val_size}")
+    print("--------------------")
 
     # split dataset
     train_data = data[:train_size]
@@ -116,6 +117,7 @@ def split_data(data: np.ndarray):
     print(f"Train data shape: {train_data.shape}")
     print(f"Validation data shape: {val_data.shape}")
     print(f"Test data shape: {test_data.shape}")
+    print("--------------------")
 
     # separate inputs (GRF: first 3 channels) and outputs (muscles: remaining 9)
     X_train, y_train = train_data[:, :, :3], train_data[:, :, 3:]
@@ -154,13 +156,12 @@ def plot_achilles_force(y_train: np.ndarray, muscle_index: int = 8):
 
     # overlay the mean curve in bold
     mean_curve = y_train[:, :, muscle_index].mean(axis=0)
-    ax.plot(perc_stance, mean_curve, linewidth=3, color='#1A5EB6')
+    ax.plot(perc_stance, mean_curve, linewidth=3, color='#1A5EB6', label="mean")
 
     ax.set_ylabel("Muscle Force (N)", fontsize=14)
     ax.set_xlabel("Percent Normalized Stance (%)", fontsize=14)
     ax.set_title("Achilles Tendon Force Across Training Samples", fontsize=16)
     ax.tick_params(labelsize=12)
     ax.grid(True, alpha=0.3)
-    ax.legend()
 
     return fig, ax
