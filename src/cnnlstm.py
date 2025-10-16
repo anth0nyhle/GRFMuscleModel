@@ -1,6 +1,4 @@
-import torch
 import torch.nn as nn
-import torch.optim as optim
 
 
 class CNNLSTMModel(nn.Module):
@@ -9,7 +7,8 @@ class CNNLSTMModel(nn.Module):
 
         # define the CNN
         self.cnn = nn.Sequential(
-            # nn.Conv1d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros', device=None, dtype=None)
+            # nn.Conv1d(in_channels, out_channels, kernel_size, stride=1, padding=0,
+            # dilation=1, groups=1, bias=True, padding_mode='zeros', device=None, dtype=None)
             nn.Conv1d(input_size, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2, stride=1, padding=1),
