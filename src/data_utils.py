@@ -3,6 +3,15 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 
+# define data labels
+GRF_LABELS = ['GRF_x', 'GRF_y', 'GRF_z']
+MUSCLE_LABELS = ['tibpost', 'tibant', 'edl', 'ehl', 'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
+
+# define index for data labels
+GRF_DICT = {0: 'GRF_x', 1: 'GRF_y', 2: 'GRF_z'}
+MUSCLE_DICT = {0: 'tibpost', 1: 'tibant', 2: 'edl', 3: 'ehl', 4: 'fdl', 5: 'fhl', 6: 'perbrev', 7: 'perlong', 8: 'achilles'}
+
+
 def ad2float(array_double_col):
     """
     Convert an OpenSim ArrayDouble into a Numpy array of floats

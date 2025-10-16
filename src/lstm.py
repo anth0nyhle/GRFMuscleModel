@@ -7,7 +7,8 @@ class LSTMModel(nn.Module):
         super(LSTMModel, self).__init__()
 
         # define the LSTM layer
-        # nn.LSTM(input_size, hidden_size, num_layers=1, bias=True, batch_first=False, dropout=0.0, bidirectional=False, proj_size=0, device=None, dtype=None)
+        # nn.LSTM(input_size, hidden_size, num_layers=1, bias=True, batch_first=False,
+        # dropout=0.0, bidirectional=False, proj_size=0, device=None, dtype=None)
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, batch_first=True, dropout=dropout)
 
         # fully connected layer to map from hidden state to output features
