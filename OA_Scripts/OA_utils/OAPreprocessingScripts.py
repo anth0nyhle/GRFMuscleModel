@@ -127,7 +127,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
     tracking_time = np.asarray(tracking_df['Time'].values)
     l_heel = np.asarray(tracking_df['L.Heel'].values)
     r_heel = np.asarray(tracking_df['R.Heel'].values)
-
+    prev_foot = 'unknown'
     #generate dataframes from raw force data
     for i in range(1, 4):
         fx = np.asarray(force_df[f'FX{i}'].values)
@@ -157,7 +157,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
             #get times from tracking and force data that correspond with valid segment start/ends
             force_t1, force_t2 = time_force[s], time_force[e]
             tracking_mask = (tracking_time >= np.floor(force_t1 * 100) / 100) & \
-                            (tracking_time <= np.ceil(force_t2 * 100) / 100)
+                            (tracking_time <= np.ceil(force_t1 * 100) / 100)
             if not np.any(tracking_mask):
                 continue
             #extract left and right heel locations and center of pressure for segment
@@ -165,11 +165,17 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
             rheel_seg = r_heel[tracking_mask]
             copx_seg = copx[s:e]
             #compare distance from heel marker to copx to assign left or right
-            dist_L = np.mean(np.abs(copx_seg[:,None] - lheel_seg))
-            dist_R = np.mean(np.abs(copx_seg[:, None] - rheel_seg))
-            side = 'left' if dist_L < dist_R else 'right'
+            dist_L = np.mean(np.abs(np.abs(copx_seg[:,None]) - np.abs(lheel_seg)))
+            dist_R = np.mean(np.abs(np.abs(copx_seg[:, None]) - np.abs(rheel_seg)))
+            if dist_L < dist_R and prev_foot != 'left':
+                side = 'left'
+            elif prev_foot != 'right':
+                side = 'right'
+            else:
+                side = 'left'
             #update grf data and segment dictionary according to which foot is assigned to the stance segment
             if side == 'left':
+                prev_foot = 'left'
                 left_force[s:e, 0] += fx[s:e]
                 left_force[s:e, 1] += fy[s:e]
                 left_force[s:e, 2] += fz[s:e]
@@ -181,6 +187,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
                 left_torque[s:e, 2] += tz[s:e]
                 stance_segs[trial_name]['left'].append((force_t1, force_t2))
             else:
+                prev_foot = 'right'
                 right_force[s:e, 0] += fx[s:e]
                 right_force[s:e, 1] += fy[s:e]
                 right_force[s:e, 2] += fz[s:e]
@@ -260,8 +267,8 @@ def process_hjc_trc(input_path: str, output_path: str, markers_to_drop: list):
     tracking_df = tracking_df.drop(columns=meta_cols)
     tracking_df.columns = col_names
     #extract heel marker X coords (R.Heel : X30, L.Heel : X41)
-    r_heel = tracking_df.iloc[:, 84]
-    l_heel = tracking_df.iloc[:, 117]
+    r_heel = tracking_df.iloc[:, 84] / 1000
+    l_heel = tracking_df.iloc[:, 117] / 1000
     heel_df = pd.concat([meta_df.iloc[:, 1], r_heel, l_heel], axis=1)
     heel_df.columns = ['Time','R.Heel', 'L.Heel']
     #associate marker data with names
