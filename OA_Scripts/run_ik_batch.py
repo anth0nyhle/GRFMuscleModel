@@ -37,6 +37,6 @@ for subj in subjects:
             subject_trials[subj]['forces'].append({'input': force_in, 'output': force_out})
 #Call IK on all trials
 for subj, data in subject_trials.items():
-    model = osim.Model(f'Results/Scaling/{subj}_scaled.osim')
+    model = osim.Model(root_dir + f'Results/Scaling/{subj}_scaled.osim')
     for trc in data['tracking']:
         inverse_kinmatics(root_dir= root_dir, tracking_data_filepath=trc['output'], model=model)
