@@ -96,7 +96,7 @@ def train_model(
     # restore best model
     model.load_state_dict(best_model_state)
 
-    return model, history
+    return model, best_val_loss, history
 
 
 def evaluate_model(
