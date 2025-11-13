@@ -174,3 +174,5 @@ def plot_achilles_force(y_train: np.ndarray, muscle_index: int = 8):
     ax.grid(True, alpha=0.3)
 
     return fig, ax
+
+
