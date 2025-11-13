@@ -196,3 +196,23 @@ octave-workspace
 # large dataset, do not upload to github
 data/
 Old_Young_Walking_Data/*zip
+*.mot
+*.anc
+*.xml
+*.anb
+*.trb
+*.trc
+*.forces
+*.prj
+*.jnt
+*.msl
+*.cal
+*.txt
+*.zip
+*.DS_store
+*.osim
+*.m
+*.sto
+*.png
+*.jpg
+Old_Young_Walking_Data/transformed/grf_pickles/
