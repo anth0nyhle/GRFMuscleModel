@@ -195,4 +195,4 @@ octave-workspace
 
 # large dataset, do not upload to github
 data/
-Old_Young_Walking_Data/
+Old_Young_Walking_Data/*zip
