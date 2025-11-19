@@ -1,72 +1,72 @@
 Tibialis Posterior:
- Mean Max = 123.96
- Std Max = 36.61
- Mean Min = 19.43
- Std Min = 3.71
- Mean = 66.40
- Std = 40.56
+ Mean Max = 123.81
+ Std Max = 36.48
+ Mean Min = 19.44
+ Std Min = 3.70
+ Mean = 66.33
+ Std = 40.48
 
 Tibialis Anterior:
- Mean Max = 106.67
- Std Max = 27.58
- Mean Min = 3.32
+ Mean Max = 106.47
+ Std Max = 27.14
+ Mean Min = 3.33
  Std Min = 2.59
- Mean = 25.97
- Std = 30.33
+ Mean = 25.92
+ Std = 30.24
 
 Extensor Digitorum Longus:
- Mean Max = 23.12
- Std Max = 10.62
+ Mean Max = 23.08
+ Std Max = 10.53
  Mean Min = 1.36
  Std Min = 0.04
  Mean = 3.67
- Std = 6.15
+ Std = 6.13
 
 Extensor Hallucis Longus:
- Mean Max = 5.68
- Std Max = 1.89
+ Mean Max = 5.66
+ Std Max = 1.71
  Mean Min = 0.67
  Std Min = 0.02
  Mean = 1.28
- Std = 1.42
+ Std = 1.40
 
 Flexor Digitorum Longus:
- Mean Max = 7.14
- Std Max = 2.26
+ Mean Max = 7.12
+ Std Max = 2.15
  Mean Min = 1.20
- Std Min = 0.23
- Mean = 3.81
- Std = 2.31
+ Std Min = 0.24
+ Mean = 3.80
+ Std = 2.29
 
 Flexor Hallucis Longus:
- Mean Max = 23.57
- Std Max = 8.67
+ Mean Max = 23.52
+ Std Max = 8.53
  Mean Min = 2.15
  Std Min = 0.05
- Mean = 10.87
- Std = 9.15
+ Mean = 10.85
+ Std = 9.11
 
 Peroneus Brevis:
- Mean Max = 9.05
- Std Max = 3.35
+ Mean Max = 9.02
+ Std Max = 3.16
  Mean Min = 1.65
  Std Min = 0.69
- Mean = 3.90
- Std = 2.65
+ Mean = 3.89
+ Std = 2.63
 
 Peroneus Longus:
- Mean Max = 32.30
- Std Max = 12.85
+ Mean Max = 32.20
+ Std Max = 12.53
  Mean Min = 7.56
- Std Min = 2.11
- Mean = 14.81
- Std = 8.62
+ Std Min = 2.10
+ Mean = 14.79
+ Std = 8.57
 
 Achilles:
- Mean Max = 681.61
- Std Max = 111.18
- Mean Min = 23.13
- Std Min = 2.39
- Mean = 303.76
- Std = 226.20
+ Mean Max = 681.38
+ Std Max = 110.90
+ Mean Min = 23.14
+ Std Min = 2.37
+ Mean = 303.85
+ Std = 226.15
 
