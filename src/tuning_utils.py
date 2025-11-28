@@ -112,7 +112,7 @@ def validate_epoch(
     val_loader: DataLoader,
     criterion: nn.Module,
     device: torch.device
-) -> float:
+) -> Tuple[float, torch.Tensor, torch.Tensor]:
     """
     Validate model for one epoch.
 
@@ -127,6 +127,8 @@ def validate_epoch(
     """
     model.eval()
     val_loss = 0.0
+    val_outputs = []
+    val_targets = []
 
     with torch.no_grad():
         for X_batch, y_batch in val_loader:
@@ -140,10 +142,18 @@ def validate_epoch(
             # Accumulate loss
             val_loss += loss.item() * X_batch.size(0)
 
+            # Store outputs and targets
+            val_outputs.append(outputs.cpu())
+            val_targets.append(y_batch.cpu())
+
     # Average loss over all samples
     val_loss /= len(val_loader.dataset)  # type: ignore
 
-    return val_loss
+    # Concatenate all batches
+    val_outputs = torch.cat(val_outputs, dim=0)
+    val_targets = torch.cat(val_targets, dim=0)
+
+    return val_loss, val_outputs, val_targets
 
 
 def train_early_stopping(
@@ -183,7 +193,7 @@ def train_early_stopping(
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
 
         # Validate
-        val_loss = validate_epoch(model, val_loader, criterion, device)
+        val_loss, _, _ = validate_epoch(model, val_loader, criterion, device)
 
         # Print progress if verbose
         if verbose and (epoch + 1) % 10 == 0:
@@ -309,7 +319,7 @@ def train_final_model(
 
     # Prepare model parameters (exclude training-specific params)
     model_params = {k: v for k, v in best_params.items()
-                    if k not in ['batch_size', 'learning_rate', 'regularization']}
+                    if k not in ['batch_size', 'learning_rate', 'regularization', 'dropout_rate']}
 
     # Add any fixed parameters (e.g., input_size, output_size)
     if 'input_size' not in model_params:
@@ -317,51 +327,91 @@ def train_final_model(
     if 'output_size' not in model_params:
         model_params['output_size'] = 9  # Adjust based on your data
 
-    # Train the model
-    final_val_loss, best_model = train_eval_optuna(
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        model_class=model_class,
-        model_params=model_params,
-        learning_rate=learning_rate,
-        batch_size=batch_size,
-        regularization=regularization,
-        device=device,
-        num_epochs=num_epochs,
-        patience=patience,
-        verbose=verbose
+    # Create data loaders
+    train_loader, val_loader = create_dataloaders(
+        train_dataset, val_dataset, batch_size
     )
 
-    # Evaluate on test set
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    criterion = nn.MSELoss()
-    test_loss = validate_epoch(best_model, test_loader, criterion, device)
+    # Initialize model and optimizer
+    model, optimizer, criterion = init_model_optimizer(
+        model_class, model_params, learning_rate, regularization, device
+    )
 
-    # Calculate training loss on full training set
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    train_loss = validate_epoch(best_model, train_loader, criterion, device)
+    # Train with early stopping and capture final training loss
+    best_val_loss, best_model_state_dict = train_early_stopping(
+        model, train_loader, val_loader, optimizer, criterion,
+        device, num_epochs, patience, verbose
+    )
+
+    # Load best model state
+    model.load_state_dict(best_model_state_dict)
+
+    # Calculate final training loss with best model
+    final_train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
+
+    # # Evaluate on test set
+    # test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    # test_loss, _, _ = validate_epoch(model, test_loader, criterion, device)
 
     # Print results
     if verbose:
         print("=" * 50)
         print("Final Model Results:")
         print("=" * 50)
-        print(f"Training Loss:   {train_loss:.6f}")
-        print(f"Validation Loss: {final_val_loss:.6f}")
-        print(f"Test Loss:       {test_loss:.6f}")
+        print(f"Training Loss:   {final_train_loss:.6f}")
+        print(f"Validation Loss: {best_val_loss:.6f}")
+        # print(f"Test Loss:       {test_loss:.6f}")
         print("=" * 50)
 
     # Save model if path is provided
     if save_path:
-        torch.save(best_model.state_dict(), save_path)
+        torch.save(model.state_dict(), save_path)
         if verbose:
             print(f"Model saved to: {save_path}")
 
     # Return model and results
     results = {
-        'train_loss': train_loss,
-        'val_loss': final_val_loss,
-        'test_loss': test_loss
+        'train_loss': final_train_loss,
+        'val_loss': best_val_loss,
+        # 'test_loss': test_loss
     }
 
-    return best_model, results
+    return model, results
+
+
+def test_final_model(
+    model: nn.Module,
+    test_dataset,
+    batch_size: int,
+    criterion: nn.Module,
+    device: torch.device,
+    verbose: bool = True
+) -> Tuple[float, torch.Tensor, torch.Tensor]:
+    """
+    Test the model on test dataset.
+
+    Args:
+        model (nn.Module): Trained model to test.
+        test_dataset: Test dataset.
+        batch_size (int): Batch size for test loader.
+        criterion (nn.Module): Loss function.
+        device (torch.device): Device to use.
+
+    Returns:
+        tuple: (test_loss, test_outputs, test_targets)
+            - test_loss (float): Average test loss
+            - test_outputs (torch.Tensor): Model predictions
+            - test_targets (torch.Tensor): Ground truth targets
+    """
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    test_loss, test_outputs, test_targets = validate_epoch(model, test_loader, criterion, device)
+
+    # Print results
+    if verbose:
+        print("=" * 50)
+        print("Final Model Results:")
+        print("=" * 50)
+        print(f"Test Loss:       {test_loss:.6f}")
+        print("=" * 50)
+
+    return test_loss, test_outputs, test_targets
