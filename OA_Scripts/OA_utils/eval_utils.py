@@ -8,6 +8,41 @@ def load_model(model, model_path):
 
     return model
 
+def load_muscle_stats(filepath):
+    """
+    Load muscle statistics from a text file formatted like:
+
+    Tibialis Posterior:
+     Mean Max = 352.28
+     Std Max = 153.86
+     ...
+    """
+
+    stats = {}
+    current_muscle = None
+
+    with open(filepath, "r") as f:
+        for line in f:
+            line = line.strip()
+
+            # Skip empty lines
+            if not line:
+                continue
+
+            # New muscle section ends with ':'
+            if line.endswith(":"):
+                current_muscle = line[:-1]
+                stats[current_muscle] = {}
+                continue
+
+            # Parse "Key = Value"
+            if "=" in line:
+                key, value = line.split("=")
+                key = key.strip()
+                value = float(value.strip())
+                stats[current_muscle][key] = value
+
+    return stats
 
 def calc_r2_muscle(y_true, y_pred):
     ss_res = np.sum((y_true - y_pred) ** 2, axis=(0, 1))
@@ -148,6 +183,24 @@ def calc_mae_weighted(y_true, y_pred):
 
     return relative_mae_weighted
 
+def calc_mae_muscle_normalized(y_true, y_pred):
+    mae = np.mean(np.abs(y_true - y_pred), axis=(0, 1))
+
+    peaks  = np.max(y_true, axis=1)
+    average_peaks = np.mean(peaks, axis = 0)
+
+    norm_mae = mae / average_peaks
+    
+    muscle_labels = ['tibpost', 'tibant', 'edl', 'ehl',
+                     'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
+
+    for label, mae_val, norm_mae_val in zip(muscle_labels, mae, norm_mae):
+        print(f"{label}: MAE:{mae_val:.4f}; Normalized MAE:{norm_mae_val:.4f}")
+    
+    norm_mae_overall = np.mean(norm_mae)
+
+    return  mae, norm_mae, norm_mae_overall
+    
 
 def calc_mae_overall(y_true, y_pred):
     y_true = y_true.flatten()
@@ -171,6 +224,45 @@ def eval_model(model, X_test_tensor, y_test_tensor):
         test_loss = criterion(y_pred_tensor, y_test_tensor).item()
 
     return test_loss, y_pred_tensor
+
+def eval_threshold(y_pred):
+    muscles = [
+        "tibpost", "tibant", "edl", "ehl", 
+        "fdl", "fhl",
+        "perbrev", "perlong", "achilles"
+    ]
+    plantars = ['tibpost', 'fhl', 'fdl', 'perbrev', 'perlong', 'achilles']
+    dorsis = ['tibant', 'ehl', 'edl']
+    p_idxs = [muscles.index(m) for m in plantars]
+    d_idxs = [muscles.index(m) for m in dorsis]
+    OA1 = y_pred[:42]
+    OA5 = y_pred[42:58]
+    OA1_mass = 36.2872
+    OA5_mass = 29.93694
+
+    OA1_peaks = []
+
+    for seg in OA1:
+        pf_force = seg[:, p_idxs].sum(axis = 1)
+        df_force = seg[:, d_idxs].sum(axis = 1)
+        peak_pf = pf_force[78]
+        df_force_toe_off = df_force[78]
+        norm_force = (peak_pf - df_force_toe_off) / OA1_mass
+        OA1_peaks.append(norm_force)
+
+    OA5_peaks = []
+
+    for seg in OA5:
+        pf_force = seg[:, p_idxs].sum(axis = 1)
+        df_force = seg[:, d_idxs].sum(axis = 1)
+        peak_pf = pf_force[75]
+        df_force_toe_off = df_force[75]
+        norm_force = (peak_pf - df_force_toe_off) / OA5_mass
+        OA5_peaks.append(norm_force)
+
+    return OA1_peaks, OA5_peaks
+
+
 
 
 def generate_latex_table(results_muscle_dict, results_overall_dict, muscle_labels):
