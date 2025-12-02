@@ -183,7 +183,7 @@ def calc_mae_weighted(y_true, y_pred):
 
     return relative_mae_weighted
 
-def calc_mae_muscle_normalized(y_true, y_pred):
+def calc_mae_muscle_normalized_peak_force(y_true, y_pred):
     mae = np.mean(np.abs(y_true - y_pred), axis=(0, 1))
 
     peaks  = np.max(y_true, axis=1)
@@ -200,6 +200,30 @@ def calc_mae_muscle_normalized(y_true, y_pred):
     norm_mae_overall = np.mean(norm_mae)
 
     return  mae, norm_mae, norm_mae_overall
+
+def calc_mae_muscle_normalized_mass(y_true, y_pred):
+    OA1_true = y_true[0:42]
+    OA5_true = y_true[42:58]
+    YA2_true = y_true[58:]   
+    OA1_pred = y_pred[0:42]
+    OA5_pred = y_pred[42:58]
+    YA2_pred = y_pred[58:]
+    OA1_mae = np.mean(np.abs(OA1_true - OA1_pred), axis=(0, 1))
+    OA5_mae = np.mean(np.abs(OA5_true - OA5_pred), axis=(0, 1))
+    YA2_mae = np.mean(np.abs(YA2_true - YA2_pred), axis=(0, 1))
+    OA1_mae_norm = OA1_mae / 36.2872
+    OA5_mae_norm = OA5_mae / 29.93694
+    YA2_mae_norm = YA2_mae / 50.71
+    norm_mae = (OA1_mae_norm + OA5_mae_norm + YA2_mae_norm) / 3
+    muscle_labels = ['tibpost', 'tibant', 'edl', 'ehl',
+                     'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
+    for label, norm_mae_val in zip(muscle_labels, norm_mae):
+        print(f"{label}: Normalized MAE:{norm_mae_val:.4f}")
+    
+    norm_mae_overall = np.mean(norm_mae)
+    print(f'Overall MAE Normalized by bodyweight: {norm_mae_overall}')
+
+    return norm_mae, norm_mae_overall
     
 
 def calc_mae_overall(y_true, y_pred):
