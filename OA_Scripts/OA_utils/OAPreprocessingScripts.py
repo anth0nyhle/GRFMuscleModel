@@ -87,7 +87,7 @@ def filter_id(input_path: str, output_path: str):
             f.write(line)
         id_df.to_csv(f, sep='\t', index=False, lineterminator='\n')
 
-def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, threshold: float, trial_name: str):
+def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, threshold: float, trial_name: str, pickle_path: str):
     """
     Function for re-naming ground reaction force data. Compares center of pressure data during gait cycles to heel marker x coordinates and assigns ground reaction forces to left or right foot
 
@@ -229,8 +229,9 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
        
     })
     #write our final df to a .pkl file for faster loading because we will need it later
-    path = '/Users/briankeller/Desktop/GRFMuscleModel/Old_Young_Walking_Data/transformed/grf_pickles/' + trial_name
-    final_df.to_pickle(path)
+    if pickle_path == '':
+        pickle_path = '/Users/briankeller/Desktop/GRFMuscleModel/Old_Young_Walking_Data/transformed/grf_pickles/' + trial_name
+    final_df.to_pickle(pickle_path)
     return final_df, stance_segs        
 
 def process_hjc_trc(input_path: str, output_path: str, markers_to_drop: list):
@@ -388,7 +389,7 @@ def process_grf(input_path: str):
     final_df = final_df[final_cols]
     return final_df
 
-def preprocess_trc_grf(trc_ip: str, trc_op: str, markers_to_drop: list,  grf_ip: str, grf_op: str):
+def preprocess_trc_grf(trc_ip: str, trc_op: str, markers_to_drop: list,  grf_ip: str, grf_op: str, grf_pickle_path: str):
     """
     Function that calls file preprocessing and center of pressure detection functions. Writes transformed and re-formatted ground reation force data to a .mot file
 
@@ -411,7 +412,7 @@ def preprocess_trc_grf(trc_ip: str, trc_op: str, markers_to_drop: list,  grf_ip:
     heel_df = process_hjc_trc(trc_ip, trc_op, markers_to_drop)
     grf_df = process_grf(grf_ip)
     #call stance detection function
-    final_grf_df, stance_segs = detect_foot_and_stance(heel_df, grf_df, 1, trial_name)
+    final_grf_df, stance_segs = detect_foot_and_stance(heel_df, grf_df, 1, trial_name, grf_pickle_path)
     #write finalized grf data to .mot file with proper header
     mot_header_lines = [
         f"{grf_op.split('/')[-1]}",  
