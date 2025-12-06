@@ -27,11 +27,15 @@ A demo video describing the process and results from the full training of the mo
 
 ### Data
 
-1. All data for demo script is found in the "Demo_data" folder.
+1. All data for demo script is found in the "Demo_data" folder. It is a sample trial from the older adult data collected by [Silder et al., 2008](https://doi.org/10.1016/j.jbiomech.2008.02.016). 
 
 ### Execution
 
-Demo script describes steps for execution. Ensure it is in the 'OA_script' directory, which is a subdirectory of the main repository. The demo data should be in the root folder, and is referenced as such in the demo script. 
+'6960_demo' script contains steps for execution. Ensure it is in the 'OA_script' directory, which is a subdirectory of the main repository/root. The demo data should be in the root folder, and is referenced as such in the demo script. 
+
+The demo script uses preprocessing scripts for the raw demo data that applies necessary transformations and filetype conversions as well as segmenting the trial into stance phases. The scripts used for this can be found in 'OAPreprocesingScripts.py' in the 'OA_utils' folder. There are also function calls to the 'data_utils.py' class for a method that normalizes segments to percent gait cycle rather than time. These utility scrips contain the functions used for preprocessing all of the raw data to create the proper inputs to our models and our demo script shows how they can also be used for raw data gathered in a similar manner. 
+
+The deep learning models are loaded from classes that describe their architecture in the 'OA_scripts' folder. The states of the best performing trained models are stored in the 'models' folder. For this part project, the 'OA' prefixed model classes were used. Models and classes without this prefix were trained on 13,000 young adult gait cycles, whereas the OA models were trained on 1500 mixed young and old adult gait cycles. 
 
 ### Additional Documentation
 
