@@ -9,7 +9,7 @@ The older adult data was preprocessed through scaling and rotation to format in 
 
 Four models were explored, including LSTM, CNN-LSTM, LSTM with Attention, and a Transformer. All models achieved strong predictive performance, and the LSTM and Transformer performed the best. These results highlight the potential of deep learning to capture the complex relationships and patterns between GRFs and below knee muscle forces during gait. This work provides groundwork for expanding access to musculoskeletal analysis using solely ground reaction forces without kinematics being captured.
 
-A demo video describing the process and results from the full training of the models can be found [here](insert link)
+A demo video describing the process and results from the full training of the models can be found [here](https://youtu.be/AzkjoKC9NX0)
 
 
 ## Getting Started
