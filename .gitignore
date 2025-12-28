@@ -202,8 +202,6 @@ Old_Young_Walking_Data/
 *.cal
 *.zip
 
-*.osim
-*.m
 *.sto
 *.png
 *.jpg
