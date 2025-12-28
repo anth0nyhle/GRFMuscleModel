@@ -195,3 +195,18 @@ octave-workspace
 
 # large dataset, do not upload to github
 data/
+Old_Young_Walking_Data/
+*.prj
+*.jnt
+*.msl
+*.cal
+*.zip
+
+*.sto
+*.png
+*.jpg
+Old_Young_Walking_Data/transformed/grf_pickles/
+
+# macOS stuff
+.DS_store
+**/.DS_store
