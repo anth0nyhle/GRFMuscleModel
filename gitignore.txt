@@ -195,7 +195,10 @@ octave-workspace
 
 # large dataset, do not upload to github
 data/
-Old Young Walking Data/ 
+Old Young Walking Data/
+Demo_data/
+
+*.xls 
 
 # macOS stuff
 .DS_store
