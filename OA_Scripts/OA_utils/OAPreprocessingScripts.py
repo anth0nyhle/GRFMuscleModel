@@ -1,3 +1,4 @@
+from re import L
 import pandas as pd
 import numpy as np
 from scipy.signal import butter, filtfilt
@@ -97,6 +98,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
     force_df : dataframe containing rotated and scaled ground reaction force data, point data, and ground torque data
     threshold : force threshold for extracting gait cycles
     trial_name : string containing the name of the subject, speed, and trial number. Used as a key in the dictionary that stores stance phase times for each trial
+    pickle_path : string specifying the file directory in which prcoessed grf pickles are stored for later use
 
     Returns
     -------
@@ -267,9 +269,15 @@ def process_hjc_trc(input_path: str, output_path: str, markers_to_drop: list):
     meta_df = meta_df.rename(columns={meta_df.columns[0]: '', meta_df.columns[1]: ''})
     tracking_df = tracking_df.drop(columns=meta_cols)
     tracking_df.columns = col_names
-    #extract heel marker X coords (R.Heel : X30, L.Heel : X41)
-    r_heel = tracking_df.iloc[:, 84] / 1000
-    l_heel = tracking_df.iloc[:, 117] / 1000
+    #get index corresponding to heel markers
+    r_idx = marker_names.index('R.Heel')
+    l_idx = marker_names.index('L.Heel')
+    #get corresponding x position columns for heel markers
+    r_x_col = r_idx * 3
+    l_x_col = l_idx * 3
+    #extract position data for heel markers
+    r_heel = tracking_df.iloc[:, r_x_col] / 1000
+    l_heel = tracking_df.iloc[:, l_x_col] / 1000
     heel_df = pd.concat([meta_df.iloc[:, 1], r_heel, l_heel], axis=1)
     heel_df.columns = ['Time','R.Heel', 'L.Heel']
     #associate marker data with names
