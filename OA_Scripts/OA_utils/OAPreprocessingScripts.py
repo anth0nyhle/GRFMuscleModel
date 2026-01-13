@@ -273,11 +273,13 @@ def process_hjc_trc(input_path: str, output_path: str, markers_to_drop: list):
     r_idx = marker_names.index('R.Heel')
     l_idx = marker_names.index('L.Heel')
     #get corresponding x position columns for heel markers
-    r_x_col = r_idx * 3
-    l_x_col = l_idx * 3
+    r_x_col = (r_idx - 2) * 3
+    l_x_col = (l_idx - 2) * 3 
     #extract position data for heel markers
     r_heel = tracking_df.iloc[:, r_x_col] / 1000
+    print(r_heel.head)
     l_heel = tracking_df.iloc[:, l_x_col] / 1000
+    print(l_heel.head)
     heel_df = pd.concat([meta_df.iloc[:, 1], r_heel, l_heel], axis=1)
     heel_df.columns = ['Time','R.Heel', 'L.Heel']
     #associate marker data with names
