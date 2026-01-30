@@ -121,8 +121,8 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
     #initialize new data structures for grf data (left and right vs 1, 2, and 3)
     left_force = np.zeros((len(force_df), 3))
     right_force = np.zeros((len(force_df), 3))
-    left_cop = np.zeros((len(force_df), 3))
-    right_cop = np.zeros((len(force_df), 3))
+    left_cop = np.zeros((len(force_df), 4))
+    right_cop = np.zeros((len(force_df), 4))
     left_torque = np.zeros((len(force_df), 3))
     right_torque = np.zeros((len(force_df), 3))
     time_force = np.asarray(force_df['time'].values)
@@ -158,23 +158,39 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
         for (s, e) in trial_segs:
             #get times from tracking and force data that correspond with valid segment start/ends
             force_t1, force_t2 = time_force[s], time_force[e]
-            tracking_mask = (tracking_time >= np.floor(force_t1 * 100) / 100) & \
-                            (tracking_time <= np.ceil(force_t1 * 100) / 100)
-            if not np.any(tracking_mask):
+            force_tseg = time_force[s:e]               # length N_force
+            # pick the tracking samples over the whole segment window
+            tracking_mask = (tracking_time >= force_t1) & (tracking_time <= force_t2)
+            if tracking_mask.sum() < 2:
                 continue
-            #extract left and right heel locations and center of pressure for segment
-            lheel_seg = l_heel[tracking_mask]
-            rheel_seg = r_heel[tracking_mask]
+
+            t_tr = tracking_time[tracking_mask]
+            l_tr = l_heel[tracking_mask]
+            r_tr = r_heel[tracking_mask]
+
+            # interpolate heel x to force timestamps
+            lheel_force = np.interp(force_tseg, t_tr, l_tr)
+            rheel_force = np.interp(force_tseg, t_tr, r_tr)
+
+            copx_force = copx[s:e]
+
+            # distances for classification (now both are 1D aligned vectors)
+            dist_L = np.mean(np.abs(copx_force - lheel_force))
+            dist_R = np.mean(np.abs(copx_force - rheel_force))
+
+            # compute foot-relative COP (1D)
+            coprel_L = copx_force - lheel_force
+            coprel_R = copx_force - rheel_force
+
             copx_seg = copx[s:e]
-            #compare distance from heel marker to copx to assign left or right
-            dist_L = np.mean(np.abs(np.abs(copx_seg[:,None]) - np.abs(lheel_seg)))
-            dist_R = np.mean(np.abs(np.abs(copx_seg[:, None]) - np.abs(rheel_seg)))
-            if dist_L < dist_R and prev_foot != 'left':
+            if dist_L + 1e-6 < dist_R:
                 side = 'left'
-            elif prev_foot != 'right':
+            elif dist_R + 1e-6 < dist_L:
                 side = 'right'
-            else:
+            elif prev_foot == 'right':
                 side = 'left'
+            else:
+                side = 'right'
             #update grf data and segment dictionary according to which foot is assigned to the stance segment
             if side == 'left':
                 prev_foot = 'left'
@@ -184,6 +200,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
                 left_cop[s:e, 0] += copx[s:e]
                 left_cop[s:e, 1] += copy[s:e]
                 left_cop[s:e, 2] += copz[s:e]
+                left_cop[s:e, 3] += coprel_L
                 left_torque[s:e, 0] += tx[s:e]
                 left_torque[s:e, 1] += ty[s:e]
                 left_torque[s:e, 2] += tz[s:e]
@@ -196,6 +213,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
                 right_cop[s:e, 0] += copx[s:e]
                 right_cop[s:e, 1] += copy[s:e]
                 right_cop[s:e, 2] += copz[s:e]
+                right_cop[s:e, 3] += coprel_R
                 right_torque[s:e, 0] += tx[s:e]
                 right_torque[s:e, 1] += ty[s:e]
                 right_torque[s:e, 2] += tz[s:e]
@@ -212,6 +230,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
         'ground_force_px': right_cop[:, 0],
         'ground_force_py': right_cop[:, 1],
         'ground_force_pz': right_cop[:, 2],
+        'ground_force_new_px' : right_cop[:, 3],
         # Left forces
         '1_ground_force_vx': left_force[:, 0],
         '1_ground_force_vy': left_force[:, 1],
@@ -220,6 +239,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
         '1_ground_force_px': left_cop[:, 0],
         '1_ground_force_py': left_cop[:, 1],
         '1_ground_force_pz': left_cop[:, 2],
+        '1_ground_force_new_px' : left_cop[:, 3],
         # Right torques
         'ground_torque_x': right_torque[:, 0],
         'ground_torque_y': right_torque[:, 1],
@@ -234,6 +254,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
     if pickle_path == '':
         pickle_path = '/Users/briankeller/Desktop/GRFMuscleModel/Old_Young_Walking_Data/transformed/grf_pickles/' + trial_name
     final_df.to_pickle(pickle_path)
+    final_df = final_df.drop(columns=['1_ground_force_new_px', 'ground_force_new_px'])
     return final_df, stance_segs        
 
 def process_hjc_trc(input_path: str, output_path: str, markers_to_drop: list):
