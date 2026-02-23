@@ -1,7 +1,7 @@
 from re import L
 import pandas as pd
 import numpy as np
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, filtfilt, find_peaks
 
 
 def lowpass_filter_df(df: pd.DataFrame, cutoff: float, fs: float, order: int = 2):
@@ -172,17 +172,41 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
             lheel_force = np.interp(force_tseg, t_tr, l_tr)
             rheel_force = np.interp(force_tseg, t_tr, r_tr)
 
-            copx_force = copx[s:e]
-
-            # distances for classification (now both are 1D aligned vectors)
-            dist_L = np.mean(np.abs(copx_force - lheel_force))
-            dist_R = np.mean(np.abs(copx_force - rheel_force))
-
-            # compute foot-relative COP (1D)
-            coprel_L = copx_force - lheel_force
-            coprel_R = copx_force - rheel_force
-
             copx_seg = copx[s:e]
+
+            # distances between cop and heel markers for side classification 
+            dist_L = np.mean(np.abs(copx_seg - lheel_force))
+            dist_R = np.mean(np.abs(copx_seg - rheel_force))
+
+            #get vertical reaction force segment
+            fy_seg   = fy[s:e]
+
+            copx_norm = np.zeros_like(copx_seg)
+            # find peaks with adaptive prominence + spacing
+            #min_prom_frac = 0.15
+            min_dist_s = 0.2
+            #width_s = 0.1
+            fs = 2000
+            #prom = min_prom_frac * np.max(fy_seg) if np.max(fy_seg) > 0 else 0
+            dist = int(min_dist_s * fs)
+            #width = width_s * fs
+
+            peaks, props = find_peaks(fy_seg, height = 0.5 * np.max(fy_seg), distance=dist)
+            N = len(fy_seg)
+
+            if peaks.size >= 2:
+                pk1 = peaks[0]
+                pk2 = peaks[-1]
+            elif peaks.size == 1:
+                print(f'one peak found!, trial: {trial_name}, start time: {s}')
+                pk1 = peaks[0]
+                pk2 = N
+            else:
+                print(f'no peaks found! trial: {trial_name}, start time: {s}')
+                pk1 = int(np.argmax(fy_seg))
+                pk2 = N
+            copx_norm[pk1:pk2] = copx_seg[pk1:pk2] - copx_seg[pk1]
+
             if dist_L + 1e-6 < dist_R:
                 side = 'left'
             elif dist_R + 1e-6 < dist_L:
@@ -200,7 +224,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
                 left_cop[s:e, 0] += copx[s:e]
                 left_cop[s:e, 1] += copy[s:e]
                 left_cop[s:e, 2] += copz[s:e]
-                left_cop[s:e, 3] += coprel_L
+                left_cop[s:e, 3] += copx_norm
                 left_torque[s:e, 0] += tx[s:e]
                 left_torque[s:e, 1] += ty[s:e]
                 left_torque[s:e, 2] += tz[s:e]
@@ -213,7 +237,7 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
                 right_cop[s:e, 0] += copx[s:e]
                 right_cop[s:e, 1] += copy[s:e]
                 right_cop[s:e, 2] += copz[s:e]
-                right_cop[s:e, 3] += coprel_R
+                right_cop[s:e, 3] += copx_norm
                 right_torque[s:e, 0] += tx[s:e]
                 right_torque[s:e, 1] += ty[s:e]
                 right_torque[s:e, 2] += tz[s:e]
