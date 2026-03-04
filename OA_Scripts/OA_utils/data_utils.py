@@ -1,5 +1,9 @@
+from turtle import pd
 import numpy as np
 import matplotlib.pyplot as plt
+import opensim as osim
+import pandas as pd
+import os
 from scipy.interpolate import interp1d
 
 
@@ -175,4 +179,340 @@ def plot_achilles_force(y_train: np.ndarray, muscle_index: int = 8):
 
     return fig, ax
 
+# --- Util methods written by BK for use in data batch processing ---
 
+def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_force_dir, add_achilles = True):
+    compiled_segs = {}
+    base_muscles = sorted({m[:-2] for m in muscles if m.endswith(("_r", "_l"))})
+
+    # helper to read multiple columns from Storage dynamically
+    def load_muscle_columns(storage, base_muscles, side_suffix):
+        """
+        Returns: (muscle_time, muscle_data) where muscle_data maps base name -> np array
+        """
+        muscle_time_col = osim.ArrayDouble()
+        storage.getTimeColumn(muscle_time_col)
+        muscle_time = ad2float(muscle_time_col)
+
+        muscle_data = {}
+        for m in base_muscles:
+            col = osim.ArrayDouble()
+            storage.getDataColumn(f"{m}_{side_suffix}", col)
+            muscle_data[m] = ad2float(col)
+        
+        return muscle_time, muscle_data
+    problematic_segs = []
+    #loop thru all subjects and create their dictionary slots for each muscle specified
+    for subject, trials in seg_times.items():
+        compiled_segs[subject] = {
+            'grf_x' : [], 'grf_y' : [], 'grf_z' : [],
+            'cop_x' : [], 'cop_y' : [], 'cop_z' : [],
+            **{m : [] for m in base_muscles}
+        }
+        if add_achilles:
+            compiled_segs[subject]['achilles'] = []
+        #loop thru each trial, extracting gait segments according to masks 
+        for trial_name, seg_dict in trials.items():
+            #load grf
+            grf_path = os.path.join(grf_pickle_dir, trial_name)
+            grf_df = pd.read_pickle(grf_path)
+            time = grf_df['time'].values
+            #load muscle data
+            muscle_path = os.path.join(muscle_force_dir, trial_name, 'results_forces.sto')
+            muscle_storage = osim.Storage(muscle_path)
+            muscle_time, muscle_r = load_muscle_columns(storage = muscle_storage, base_muscles = base_muscles, side_suffix='r')
+            _, muscle_l = load_muscle_columns(storage = muscle_storage, base_muscles = base_muscles, side_suffix='l')
+        # segment loop
+            for side, seg_list in seg_dict.items():
+                side = side.lower()
+                if side not in ("right", "left"):
+                    continue
+                for (s, e) in seg_list:
+                    #skip segments flagged for bad activation values
+                    key = (trial_name, side, round(s, 4), round(e, 4))
+                    if key in problem_seg_keys:
+                        continue
+                    grf_mask = (time >= s) & (time <= e)
+                    m_mask   = (muscle_time >= s) & (muscle_time <= e)
+
+                    if (not grf_mask.any()) or (not m_mask.any()):
+                        continue
+
+                    # pick GRF columns based on side (matching your current naming)
+                    if side == "right":
+                        force_seg_x = grf_df.loc[grf_mask, "ground_force_vx"].to_numpy()
+                        force_seg_y = grf_df.loc[grf_mask, "ground_force_vy"].to_numpy()
+                        force_seg_z = grf_df.loc[grf_mask, "ground_force_vz"].to_numpy()
+                        pressure_seg_x = grf_df.loc[grf_mask, "ground_force_new_px"].to_numpy()
+                        pressure_seg_y = grf_df.loc[grf_mask, "ground_force_py"].to_numpy()
+                        pressure_seg_z = grf_df.loc[grf_mask, "ground_force_pz"].to_numpy()
+                        mdata = muscle_r
+                    else:
+                        force_seg_x = grf_df.loc[grf_mask, "1_ground_force_vx"].to_numpy()
+                        force_seg_y = grf_df.loc[grf_mask, "1_ground_force_vy"].to_numpy()
+                        force_seg_z = (-1.0 * grf_df.loc[grf_mask, "1_ground_force_vz"]).to_numpy()
+                        pressure_seg_x = grf_df.loc[grf_mask, "1_ground_force_new_px"].to_numpy()
+                        pressure_seg_y = grf_df.loc[grf_mask, "1_ground_force_py"].to_numpy()
+                        pressure_seg_z = grf_df.loc[grf_mask, "1_ground_force_pz"].to_numpy()
+                        mdata = muscle_l
+
+                    
+                    #filter out missteps based on y grfs
+                    y_idx_25 = int(len(force_seg_y) * 0.25)
+                    y_idx_75 = int(len(force_seg_y) * 0.75)
+                    y_idx_10 = int(len(force_seg_y) * 0.1)
+                    y_idx_1 = int(len(force_seg_y) * 0.01)
+                    if len(force_seg_y) > 0 and force_seg_y[y_idx_25] < 500 or force_seg_y[y_idx_75] < 400 or force_seg_y[y_idx_1] > 300:
+                        problematic_segs.append({
+                            'subject': trial_name,
+                            'side': side,
+                            'file':grf_path,
+                            'start_time': s,
+                            'end_time':float(e)
+                        })
+                        continue
+                    # x_cop_idx_5 = int(len(pressure_seg_x) * 0.05)
+                    # x_cop_idx_40 = int(len(pressure_seg_x) * 0.2)
+                    # if np.mean(pressure_seg_x[x_cop_idx_5:x_cop_idx_40]) < 0:
+                    #     problematic_segs.append({
+                    #         'subject': trial_name,
+                    #         'side': side,
+                    #         'file':grf_path,
+                    #         'start_time': s,
+                    #         'end_time':float(e)
+                    #     })
+                    #     continue
+
+                    compiled_segs[subject]["grf_x"].append(force_seg_x)
+                    compiled_segs[subject]["grf_y"].append(force_seg_y)
+                    compiled_segs[subject]["grf_z"].append(force_seg_z)
+                    compiled_segs[subject]["cop_x"].append(pressure_seg_x)
+                    compiled_segs[subject]["cop_y"].append(pressure_seg_y)
+                    compiled_segs[subject]["cop_z"].append(pressure_seg_z)
+
+                    # muscles in a loop (the whole point)
+                    seg_muscles = {}
+                    for m in base_muscles:
+                        seg_m = mdata[m][m_mask]
+                        compiled_segs[subject][m].append(seg_m)
+                        seg_muscles[m] = seg_m  # keep for achilles calc
+                        
+                    # optional achilles
+                    if add_achilles:
+                        seg_achilles = ( mdata['gaslat'][m_mask] + mdata['gasmed'][m_mask] + mdata['soleus'][m_mask])
+                        compiled_segs[subject]['achilles'].append(seg_achilles)
+
+    return compiled_segs, problematic_segs
+
+def get_all_segments(resampled_segs, key):
+    """
+    Collects all resampled segments for a given signal across all subjects.
+    """
+    all_segs = []
+    for subj, data in resampled_segs.items():
+        if subj == "time_resampled":
+            continue
+        if key in data:
+            all_segs.extend(data[key])
+    return np.array(all_segs)
+
+def flatten_to_muscle_dict(seg_dict, muscle_keys):
+    """
+    Convert a subject-keyed dict  {subj: {muscle: [segs...]}, ...}
+    into a muscle-keyed dict      {muscle: np.array of shape (N, T)}
+    suitable for plot_muscle_grid.
+    """
+    out = {muscle: [] for muscle in muscle_keys}
+    for subj, data in seg_dict.items():
+        if not isinstance(data, dict):
+            continue
+        for muscle in muscle_keys:
+            out[muscle].extend(data.get(muscle, []))
+    return {m: np.array(segs) for m, segs in out.items() if len(segs) > 0}
+
+def normalize_by_mass_in_order(seg_dict, all_masses, keys_to_normalize):
+    out = {}
+
+    subject_keys = [k for k, v in seg_dict.items() if isinstance(v, dict)]
+
+    if len(subject_keys) != len(all_masses):
+        raise ValueError("Mass list length does not match number of subjects")
+
+    for subj, mass in zip(subject_keys, all_masses):
+        subj_dict = seg_dict[subj]
+        out[subj] = {}
+
+        for key, seg_list in subj_dict.items():
+            if not isinstance(seg_list, list):
+                out[subj][key] = seg_list
+                continue
+
+            if key in keys_to_normalize:
+                out[subj][key] = [np.asarray(seg) / mass for seg in seg_list]
+            else:
+                out[subj][key] = seg_list
+
+    # preserve non-subject entries like time_resampled
+    for k, v in seg_dict.items():
+        if not isinstance(v, dict):
+            out[k] = v
+
+    return out
+
+def mad_filter_segments(
+    seg_dict,
+    muscle_keys,
+    k=3,
+    consistency_mode='any',
+    excess_threshold=0.5,  # in same units as your force (N/kg after normalization)
+):
+    sigma = 1.4826
+
+    # --- compute global bands ---
+    all_segs_by_muscle = {}
+    for muscle in muscle_keys:
+        pooled = []
+        for subj, data in seg_dict.items():
+            if not isinstance(data, dict):
+                continue
+            for seg in data.get(muscle, []):
+                pooled.append(np.asarray(seg))
+        if pooled:
+            all_segs_by_muscle[muscle] = np.stack(pooled)
+
+    bands = {}
+    for muscle, arr in all_segs_by_muscle.items():
+        med = np.median(arr, axis=0)
+        mad = np.median(np.abs(arr - med), axis=0)
+        bands[muscle] = {
+            'median': med,
+            'lo': med - k * sigma * mad,
+            'hi': med + k * sigma * mad,
+        }
+
+    # --- filter ---
+    filtered_dict = {}
+    dropped = []
+
+    for subj, data in seg_dict.items():
+        if not isinstance(data, dict):
+            filtered_dict[subj] = data
+            continue
+
+        n_segs = len(next(
+            (v for v in data.values() if isinstance(v, list) and len(v) > 0), []
+        ))
+
+        keep_mask = np.ones(n_segs, dtype=bool)
+        bad_muscles_per_seg = [[] for _ in range(n_segs)]
+
+        for muscle in muscle_keys:
+            if muscle not in data or muscle not in bands:
+                continue
+            lo = bands[muscle]['lo']
+            hi = bands[muscle]['hi']
+
+            for i, seg in enumerate(data[muscle]):
+                seg = np.asarray(seg)
+                # excess is how far outside the band each point is (0 if inside)
+                excess = np.maximum(seg - hi, 0) + np.maximum(lo - seg, 0)
+                mean_excess = np.mean(excess)
+                if mean_excess > excess_threshold:
+                    bad_muscles_per_seg[i].append(muscle)
+
+        for i in range(n_segs):
+            bad = bad_muscles_per_seg[i]
+            is_bad = (consistency_mode == 'any' and len(bad) > 0) or \
+                     (consistency_mode == 'all' and len(bad) == len(muscle_keys))
+            if is_bad:
+                keep_mask[i] = False
+                dropped.append((subj, i, bad))
+
+        filtered_dict[subj] = {}
+        for key, val in data.items():
+            if isinstance(val, list) and len(val) == n_segs:
+                filtered_dict[subj][key] = [s for s, keep in zip(val, keep_mask) if keep]
+            else:
+                filtered_dict[subj][key] = val
+
+    return filtered_dict, dropped, bands
+
+
+#Plotting funcions
+def plot_achilles_segments(achilles_resampled, time_resampled, figsize=(10, 10), linewidth=2):
+    """
+    achilles_resampled: list/array of segments, each shape (T,)
+    time_resampled: typically resampled_segs['time_resampled'] where time_resampled[0] is (T,)
+    """
+    fig = plt.figure(figsize=figsize)
+
+    num_segments = len(achilles_resampled)
+    x = time_resampled[0] * 100  # percent stance
+
+    for i in range(num_segments):
+        plt.plot(x, achilles_resampled[i], linewidth=linewidth)
+
+    plt.ylabel("Achilles Muscle Force (N)", fontsize=18)
+    plt.xlabel("Percent Normalized Stance", fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_muscle_grid(
+    resampled_muscles,
+    time_resampled,
+    muscle_keys,
+    nrows=11,
+    ncols=4,
+    figsize=(15, 25),
+    alpha=0.4,
+    linewidth=2,
+    plot_mean=True,
+    mean_linewidth=3,
+):
+    """
+    resampled_muscles[muscle] -> list or array of (N_segments, T)
+    time_resampled[0] -> (T,) in [0,1]
+    muscle_keys -> list of base muscle names (strings)
+    """
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
+    axes = axes.flatten()
+
+    x = time_resampled[0] * 100  # percent stance
+
+    for i, ax in enumerate(axes):
+        if i >= len(muscle_keys):
+            ax.axis("off")
+            continue
+
+        key = muscle_keys[i]
+        segments = resampled_muscles[key]
+
+        # plot all segments
+        for seg in segments:
+            ax.plot(x, seg, linewidth=linewidth, color="#A2C7E7", alpha=alpha)
+
+        # mean curve
+        if plot_mean and len(segments) > 0:
+            Y = np.asarray(segments)
+            if Y.ndim == 2:
+                ax.plot(x, Y.mean(axis=0), linewidth=mean_linewidth)
+
+        # labels
+        if i >= (nrows - 1) * ncols:
+            ax.set_xlabel("Percent Normalized Stance", fontsize=12)
+        if i % ncols == 0:
+            ax.set_ylabel("Muscle Force (N)", fontsize=12)
+
+        # auto title from key
+        title = key.replace("_", " ").title()
+        ax.set_title(title, fontsize=18)
+
+        ax.tick_params(axis="x", labelsize=16)
+        ax.tick_params(axis="y", labelsize=16)
+
+    plt.tight_layout()
+    plt.show()
