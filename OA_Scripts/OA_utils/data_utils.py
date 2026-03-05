@@ -181,8 +181,9 @@ def plot_achilles_force(y_train: np.ndarray, muscle_index: int = 8):
 
 # --- Util methods written by BK for use in data batch processing ---
 
-def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_force_dir, add_achilles = True):
+def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_force_dir, problematic_seg_keys, add_achilles = True):
     compiled_segs = {}
+
     base_muscles = sorted({m[:-2] for m in muscles if m.endswith(("_r", "_l"))})
 
     # helper to read multiple columns from Storage dynamically
@@ -230,7 +231,7 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                 for (s, e) in seg_list:
                     #skip segments flagged for bad activation values
                     key = (trial_name, side, round(s, 4), round(e, 4))
-                    if key in problem_seg_keys:
+                    if key in problematic_seg_keys:
                         continue
                     grf_mask = (time >= s) & (time <= e)
                     m_mask   = (muscle_time >= s) & (muscle_time <= e)
@@ -364,7 +365,8 @@ def mad_filter_segments(
     muscle_keys,
     k=3,
     consistency_mode='any',
-    excess_threshold=0.5,  # in same units as your force (N/kg after normalization)
+    rms_threshold=0.3,  
+    mean_threshold=0.1,
 ):
     sigma = 1.4826
 
@@ -416,8 +418,9 @@ def mad_filter_segments(
                 seg = np.asarray(seg)
                 # excess is how far outside the band each point is (0 if inside)
                 excess = np.maximum(seg - hi, 0) + np.maximum(lo - seg, 0)
-                mean_excess = np.mean(excess)
-                if mean_excess > excess_threshold:
+                rms_excess = np.sqrt(np.mean(excess**2))   # catches peaky outliers
+                mean_excess = np.mean(excess)               # catches consistently out-of-band
+                if rms_excess > rms_threshold or mean_excess > mean_threshold:
                     bad_muscles_per_seg[i].append(muscle)
 
         for i in range(n_segs):
