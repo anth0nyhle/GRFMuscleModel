@@ -5,6 +5,8 @@ import opensim as osim
 import pandas as pd
 import os
 from scipy.interpolate import interp1d
+from collections import Counter
+import re
 
 
 # define data labels
@@ -360,15 +362,13 @@ def normalize_by_mass_in_order(seg_dict, all_masses, keys_to_normalize):
 
     return out
 
-def mad_filter_segments(
+def filter_segments(
     seg_dict,
     muscle_keys,
-    k=3,
     consistency_mode='any',
-    rms_threshold=0.3,  
-    mean_threshold=0.1,
+    rms_threshold=0.5,  
+    mean_threshold=0.5,
 ):
-    sigma = 1.4826
 
     # --- compute global bands ---
     all_segs_by_muscle = {}
@@ -384,12 +384,12 @@ def mad_filter_segments(
 
     bands = {}
     for muscle, arr in all_segs_by_muscle.items():
-        med = np.median(arr, axis=0)
-        mad = np.median(np.abs(arr - med), axis=0)
+        mean = np.mean(arr, axis=0)
+        std = np.std(arr, axis=0)
         bands[muscle] = {
-            'median': med,
-            'lo': med - k * sigma * mad,
-            'hi': med + k * sigma * mad,
+            'mean': mean,
+            'lo': mean - 2.5 * std,
+            'hi': mean + 2.5 * std,
         }
 
     # --- filter ---
@@ -418,7 +418,7 @@ def mad_filter_segments(
                 seg = np.asarray(seg)
                 # excess is how far outside the band each point is (0 if inside)
                 excess = np.maximum(seg - hi, 0) + np.maximum(lo - seg, 0)
-                rms_excess = np.sqrt(np.mean(excess**2))   # catches peaky outliers
+                rms_excess = np.sqrt(np.mean(excess**4))   # catches peaky outliers
                 mean_excess = np.mean(excess)               # catches consistently out-of-band
                 if rms_excess > rms_threshold or mean_excess > mean_threshold:
                     bad_muscles_per_seg[i].append(muscle)
@@ -519,3 +519,22 @@ def plot_muscle_grid(
 
     plt.tight_layout()
     plt.show()
+
+def summarize_segments(log_text):
+    """
+    Takes raw multiline text like 'Trial:OA1_80_2, start time:0.6065'
+    and returns a summary count of segments per subject.
+    """
+    # Extract subject codes using regex (e.g. OA1, OA2, OA17, etc.)
+    subjects = re.findall(r"Trial:(OA\d+)_", log_text)
+    counts = Counter(subjects)
+
+    # Print nicely formatted summary
+    print(f"{'Subject':<8} {'# Segments':>10}")
+    print("-" * 22)
+    for subj, n in sorted(counts.items(), key=lambda x: int(x[0][2:])):  # sort by number
+        print(f"{subj:<8} {n:>10}")
+    print("-" * 22)
+    print(f"{'Total':<8} {sum(counts.values()):>10}")
+
+    return counts
