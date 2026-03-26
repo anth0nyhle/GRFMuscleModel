@@ -261,19 +261,19 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
 
                     
                     #filter out missteps based on y grfs
-                    y_idx_25 = int(len(force_seg_y) * 0.25)
-                    y_idx_75 = int(len(force_seg_y) * 0.75)
-                    y_idx_10 = int(len(force_seg_y) * 0.1)
-                    y_idx_1 = int(len(force_seg_y) * 0.01)
-                    if len(force_seg_y) > 0 and force_seg_y[y_idx_25] < 500 or force_seg_y[y_idx_75] < 400 or force_seg_y[y_idx_1] > 300:
-                        problematic_segs.append({
-                            'subject': trial_name,
-                            'side': side,
-                            'file':grf_path,
-                            'start_time': s,
-                            'end_time':float(e)
-                        })
-                        continue
+                    # y_idx_25 = int(len(force_seg_y) * 0.25)
+                    # y_idx_75 = int(len(force_seg_y) * 0.75)
+                    # y_idx_10 = int(len(force_seg_y) * 0.1)
+                    # y_idx_1 = int(len(force_seg_y) * 0.01)
+                    # if len(force_seg_y) > 0 and force_seg_y[y_idx_25] < 500 or force_seg_y[y_idx_75] < 400 or force_seg_y[y_idx_1] > 300:
+                    #     problematic_segs.append({
+                    #         'subject': trial_name,
+                    #         'side': side,
+                    #         'file':grf_path,
+                    #         'start_time': s,
+                    #         'end_time':float(e)
+                    #     })
+                    #     continue
                     # x_cop_idx_5 = int(len(pressure_seg_x) * 0.05)
                     # x_cop_idx_40 = int(len(pressure_seg_x) * 0.2)
                     # if np.mean(pressure_seg_x[x_cop_idx_5:x_cop_idx_40]) < 0:
@@ -388,6 +388,7 @@ def filter_segments(
         std = np.std(arr, axis=0)
         bands[muscle] = {
             'mean': mean,
+            'std': std,
             'lo': mean - 2.5 * std,
             'hi': mean + 2.5 * std,
         }
@@ -419,8 +420,10 @@ def filter_segments(
                 # excess is how far outside the band each point is (0 if inside)
                 excess = np.maximum(seg - hi, 0) + np.maximum(lo - seg, 0)
                 rms_excess = np.sqrt(np.mean(excess**4))   # catches peaky outliers
-                mean_excess = np.mean(excess)               # catches consistently out-of-band
-                if rms_excess > rms_threshold or mean_excess > mean_threshold:
+                lo2 = bands[muscle]['mean'] - 2 * bands[muscle]['std']
+                hi2 = bands[muscle]['mean'] + 2 * bands[muscle]['std']
+                pct_outside = np.mean((seg < lo2) | (seg > hi2))  # fraction of timepoints beyond ±2 std
+                if rms_excess > rms_threshold or pct_outside > mean_threshold:
                     bad_muscles_per_seg[i].append(muscle)
 
         for i in range(n_segs):
