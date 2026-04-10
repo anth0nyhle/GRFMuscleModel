@@ -18,7 +18,10 @@ clear all; close all; format compact; clc; fclose all;
 data_dir = '/Users/briankeller/Desktop/GRFMuscleModel/Old_Young_Walking_Data/' ; % Base Directory to base results directory.
 addpath(genpath('src'));
 
-subject_dir = {'Y15', 'Y16', 'Y17', 'Y18', 'Y19', 'Y20', 'Y21', 'Y22'};
+subject_dir = {'OA1', 'OA2', 'OA4', 'OA5', 'OA7', 'OA8', 'OA9', 'OA10',...
+    'OA11', 'OA12', 'OA13', 'OA14', 'OA17', 'OA18', 'OA19', 'OA20', 'OA22', ...
+    'OA23', 'OA24', 'OA25', 'Y1', 'Y2', 'Y4', 'Y5', 'Y6', 'Y7', 'Y8', 'Y9', ...
+    'Y10', 'Y11', 'Y12', 'Y13', 'Y14','Y15', 'Y16', 'Y17', 'Y18', 'Y19', 'Y20', 'Y21', 'Y22'};
 trial_names = {'_80_1', '_80_2', '_80_3', '_80_4', '_80_5', '_100_1', '_100_2', '_100_3', '_100_4', '_100_5', ...
                  '_120_1', '_120_2', '_120_3', '_120_4', '_120_5'};
 
@@ -114,9 +117,9 @@ for i = 1:length(subject_dir)
         INPUTS.point_identifier = {'ground_force_p','1_ground_force_p'} ;
         
         % Joint Reaction Fields
-        INPUTS.jRxn.inFrame = 'child' ;
-        INPUTS.jRxn.onBody = 'child' ;
-        INPUTS.jRxn.jointNames = ['all'] ;
+        INPUTS.jRxn.inFrame = {'child', 'child', 'child', 'child'} ;
+        INPUTS.jRxn.onBody = {'child', 'child', 'child', 'child'} ;
+        INPUTS.jRxn.jointNames = {'ankle_r', 'subtalar_r', 'ankle_l', 'subtalar_l'} ;
         
         INPUTS.passiveForceStrains = [3 4] ; % Default = [0,.7] this is strain at zero force and strain at 1 norm force in Millard model
                                              % This only matters if ignorePassiveForces = true

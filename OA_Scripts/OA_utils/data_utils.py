@@ -329,6 +329,8 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                         jrf_side = jrf_r if side == 'right' else jrf_l
                         jrf_mask = (jrf_time >= s) & (jrf_time <= e)
                         for out_key in jrf_col_map:
+                            if side == 'left' and (out_key == 'knee_fz' or out_key == 'ankle_fz'):
+                                jrf_side[out_key][jrf_mask] = -1 * jrf_side[out_key][jrf_mask] 
                             compiled_segs[subject][out_key].append(jrf_side[out_key][jrf_mask])
 
     return compiled_segs, problematic_segs
@@ -497,7 +499,7 @@ def plot_muscle_grid(
     time_resampled,
     muscle_keys,
     nrows=11,
-    ncols=4,
+    ncols=3,
     figsize=(15, 25),
     alpha=0.4,
     linewidth=2,
