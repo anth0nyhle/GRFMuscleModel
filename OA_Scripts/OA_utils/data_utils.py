@@ -183,8 +183,24 @@ def plot_achilles_force(y_train: np.ndarray, muscle_index: int = 8):
 
 # --- Util methods written by BK for use in data batch processing ---
 
-def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_force_dir, problematic_seg_keys, add_achilles = True):
+def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_force_dir,
+                 problematic_seg_keys, add_achilles=True,
+                 jrf_dir=None, jrf_filename='results_JointReaction_ReactionLoads.sto',
+                 jrf_col_map=None):
+    """
+    jrf_col_map: dict mapping output key -> {'r': sto_col_right, 'l': sto_col_left}
+    Example:
+        jrf_col_map = {
+            'subtalar_calc_fx': {'r': 'subtalar_r_on_calcn_r_in_calcn_r_fx',
+                                 'l': 'subtalar_l_on_calcn_l_in_calcn_l_fx'},
+            ...
+        }
+    When jrf_dir and jrf_col_map are both provided, JRF segments are loaded from
+    {jrf_dir}/{trial_name}/{jrf_filename} and appended to each subject dict alongside
+    the muscle and GRF data.
+    """
     compiled_segs = {}
+    fetch_jrf = (jrf_dir is not None) and (jrf_col_map is not None)
 
     base_muscles = sorted({m[:-2] for m in muscles if m.endswith(("_r", "_l"))})
 
@@ -202,36 +218,66 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
             col = osim.ArrayDouble()
             storage.getDataColumn(f"{m}_{side_suffix}", col)
             muscle_data[m] = ad2float(col)
-        
+
         return muscle_time, muscle_data
+
+    def load_jrf_columns(storage, jrf_col_map, side):
+        """
+        Returns: (jrf_time, jrf_data) where jrf_data maps output key -> np array
+        for the given side ('r' or 'l').
+        """
+        jrf_time_col = osim.ArrayDouble()
+        storage.getTimeColumn(jrf_time_col)
+        jrf_time = ad2float(jrf_time_col)
+
+        jrf_data = {}
+        for out_key, col_names in jrf_col_map.items():
+            col = osim.ArrayDouble()
+            storage.getDataColumn(col_names[side], col)
+            jrf_data[out_key] = ad2float(col)
+
+        return jrf_time, jrf_data
+
     problematic_segs = []
-    #loop thru all subjects and create their dictionary slots for each muscle specified
+    # loop thru all subjects and create their dictionary slots for each muscle specified
     for subject, trials in seg_times.items():
         compiled_segs[subject] = {
-            'grf_x' : [], 'grf_y' : [], 'grf_z' : [],
-            'cop_x' : [], 'cop_y' : [], 'cop_z' : [],
-            **{m : [] for m in base_muscles}
+            'grf_x': [], 'grf_y': [], 'grf_z': [],
+            'cop_x': [], 'cop_y': [], 'cop_z': [],
+            **{m: [] for m in base_muscles}
         }
         if add_achilles:
             compiled_segs[subject]['achilles'] = []
-        #loop thru each trial, extracting gait segments according to masks 
+        if fetch_jrf:
+            for out_key in jrf_col_map:
+                compiled_segs[subject][out_key] = []
+
+        # loop thru each trial, extracting gait segments according to masks
         for trial_name, seg_dict in trials.items():
-            #load grf
+            # load grf
             grf_path = os.path.join(grf_pickle_dir, trial_name)
             grf_df = pd.read_pickle(grf_path)
             time = grf_df['time'].values
-            #load muscle data
+            # load muscle data
             muscle_path = os.path.join(muscle_force_dir, trial_name, 'results_forces.sto')
             muscle_storage = osim.Storage(muscle_path)
-            muscle_time, muscle_r = load_muscle_columns(storage = muscle_storage, base_muscles = base_muscles, side_suffix='r')
-            _, muscle_l = load_muscle_columns(storage = muscle_storage, base_muscles = base_muscles, side_suffix='l')
-        # segment loop
+            muscle_time, muscle_r = load_muscle_columns(storage=muscle_storage, base_muscles=base_muscles, side_suffix='r')
+            _, muscle_l = load_muscle_columns(storage=muscle_storage, base_muscles=base_muscles, side_suffix='l')
+            # load JRF data if requested
+            if fetch_jrf:
+                jrf_path = os.path.join(jrf_dir, trial_name, jrf_filename)
+                jrf_storage = osim.Storage(jrf_path)
+                jrf_time, jrf_r = load_jrf_columns(jrf_storage, jrf_col_map, 'r')
+                _, jrf_l = load_jrf_columns(jrf_storage, jrf_col_map, 'l')
+
+            # segment loop
             for side, seg_list in seg_dict.items():
                 side = side.lower()
                 if side not in ("right", "left"):
                     continue
+                side_char = 'r' if side == 'right' else 'l'
                 for (s, e) in seg_list:
-                    #skip segments flagged for bad activation values
+                    # skip segments flagged for bad activation values
                     key = (trial_name, side, round(s, 4), round(e, 4))
                     if key in problematic_seg_keys:
                         continue
@@ -259,33 +305,6 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                         pressure_seg_z = grf_df.loc[grf_mask, "1_ground_force_pz"].to_numpy()
                         mdata = muscle_l
 
-                    
-                    #filter out missteps based on y grfs
-                    # y_idx_25 = int(len(force_seg_y) * 0.25)
-                    # y_idx_75 = int(len(force_seg_y) * 0.75)
-                    # y_idx_10 = int(len(force_seg_y) * 0.1)
-                    # y_idx_1 = int(len(force_seg_y) * 0.01)
-                    # if len(force_seg_y) > 0 and force_seg_y[y_idx_25] < 500 or force_seg_y[y_idx_75] < 400 or force_seg_y[y_idx_1] > 300:
-                    #     problematic_segs.append({
-                    #         'subject': trial_name,
-                    #         'side': side,
-                    #         'file':grf_path,
-                    #         'start_time': s,
-                    #         'end_time':float(e)
-                    #     })
-                    #     continue
-                    # x_cop_idx_5 = int(len(pressure_seg_x) * 0.05)
-                    # x_cop_idx_40 = int(len(pressure_seg_x) * 0.2)
-                    # if np.mean(pressure_seg_x[x_cop_idx_5:x_cop_idx_40]) < 0:
-                    #     problematic_segs.append({
-                    #         'subject': trial_name,
-                    #         'side': side,
-                    #         'file':grf_path,
-                    #         'start_time': s,
-                    #         'end_time':float(e)
-                    #     })
-                    #     continue
-
                     compiled_segs[subject]["grf_x"].append(force_seg_x)
                     compiled_segs[subject]["grf_y"].append(force_seg_y)
                     compiled_segs[subject]["grf_z"].append(force_seg_z)
@@ -299,11 +318,18 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                         seg_m = mdata[m][m_mask]
                         compiled_segs[subject][m].append(seg_m)
                         seg_muscles[m] = seg_m  # keep for achilles calc
-                        
+
                     # optional achilles
                     if add_achilles:
-                        seg_achilles = ( mdata['gaslat'][m_mask] + mdata['gasmed'][m_mask] + mdata['soleus'][m_mask])
+                        seg_achilles = (mdata['gaslat'][m_mask] + mdata['gasmed'][m_mask] + mdata['soleus'][m_mask])
                         compiled_segs[subject]['achilles'].append(seg_achilles)
+
+                    # optional JRF
+                    if fetch_jrf:
+                        jrf_side = jrf_r if side == 'right' else jrf_l
+                        jrf_mask = (jrf_time >= s) & (jrf_time <= e)
+                        for out_key in jrf_col_map:
+                            compiled_segs[subject][out_key].append(jrf_side[out_key][jrf_mask])
 
     return compiled_segs, problematic_segs
 
