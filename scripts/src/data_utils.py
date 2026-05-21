@@ -174,3 +174,32 @@ def plot_achilles_force(y_train: np.ndarray, muscle_index: int = 8):
     ax.grid(True, alpha=0.3)
 
     return fig, ax
+
+def normalize_by_mass_in_order(seg_dict, all_masses, keys_to_normalize):
+    out = {}
+
+    subject_keys = [k for k, v in seg_dict.items() if isinstance(v, dict)]
+
+    if len(subject_keys) != len(all_masses):
+        raise ValueError("Mass list length does not match number of subjects")
+
+    for subj, mass in zip(subject_keys, all_masses):
+        subj_dict = seg_dict[subj]
+        out[subj] = {}
+
+        for key, seg_list in subj_dict.items():
+            if not isinstance(seg_list, list):
+                out[subj][key] = seg_list
+                continue
+
+            if key in keys_to_normalize:
+                out[subj][key] = [np.asarray(seg) / mass for seg in seg_list]
+            else:
+                out[subj][key] = seg_list
+
+    # preserve non-subject entries like time_resampled
+    for k, v in seg_dict.items():
+        if not isinstance(v, dict):
+            out[k] = v
+
+    return out
