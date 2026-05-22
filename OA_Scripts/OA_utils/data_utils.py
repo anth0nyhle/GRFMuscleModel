@@ -1,7 +1,6 @@
 from turtle import pd
 import numpy as np
 import matplotlib.pyplot as plt
-import opensim as osim
 import pandas as pd
 import os
 from scipy.interpolate import interp1d
@@ -201,6 +200,8 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
     """
     compiled_segs = {}
     fetch_jrf = (jrf_dir is not None) and (jrf_col_map is not None)
+
+    import opensim as osim  # only needed for OpenSim data loading
 
     base_muscles = sorted({m[:-2] for m in muscles if m.endswith(("_r", "_l"))})
 
